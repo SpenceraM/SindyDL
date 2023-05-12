@@ -1,15 +1,13 @@
 import sys
-sys.path.append("../../src")
 import os
 import argparse
 import yaml
-
-# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import datetime
 import pandas as pd
 import numpy as np
+sys.path.append("../../src")
 from example_lorenz import get_lorenz_data
-# from sindy_utils import library_size
+from sindy_utils import library_size
 # from training import train_network
 # import tensorflow as tf
 
@@ -29,8 +27,24 @@ if __name__ == '__main__':
 
     # generate training, validation, testing data
     print('Generating training data')
-    training_data = get_lorenz_data(cfg.get('n_train_ics',1000), noise_strength=cfg.get('noise_strength', 1e-6))
+    training_data = get_lorenz_data(cfg.get('n_train_ics',100), noise_strength=cfg.get('noise_strength', 1e-6))
     print('Generating validation data')
-    validation_data = get_lorenz_data(cfg.get('n_val_ics',100), noise_strength=cfg.get('noise_strength', 1e-6))
+    validation_data = get_lorenz_data(cfg.get('n_val_ics',10), noise_strength=cfg.get('noise_strength', 1e-6))
 
-    print()
+    # Finish setting up model and training parameters
+    cfg['library_dim'] = library_size(cfg['latent_dim'], cfg['poly_order'], cfg['include_sine'], True)
+    cfg['coefficient_mask'] = np.ones((cfg['library_dim'], cfg['latent_dim']))
+    cfg['epoch_size'] = training_data['x'].shape[0]
+    cfg['data_path'] = os.getcwd() + '/'
+
+    # Run training experiment
+    df = pd.DataFrame()
+    for i in range(cfg['num_experiments']):
+        print('EXPERIMENT %d' % i)
+        cfg['coefficient_mask'] = np.ones((cfg['library_dim'], cfg['latent_dim']))
+        cfg['save_name'] = 'lorenz_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
+
+        results_dict = train_network(training_data, validation_data, cfg)
+        df = df.append({**results_dict, **params}, ignore_index=True)
+
+    df.to_pickle('experiment_results_' + datetime.datetime.now().strftime("%Y%m%d%H%M") + '.pkl')
