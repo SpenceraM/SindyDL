@@ -19,7 +19,8 @@ class AutoEncoder(nn.Module):
             self.include_sine = False
         self.library_dim = cfg['library_dim']
         self.model_order = cfg['model_order']
-
+        self.sequential_thresholding = cfg['sequential_thresholding']
+        
         # TODO
         # Not sure if i need tensors here for x, dx, ddx or if they will be passed in forward function
 
@@ -30,19 +31,18 @@ class AutoEncoder(nn.Module):
             self.decoder = XcoderHalf(self.latent_dim, self.input_dim, [], self.activation)
 
         if self.model_order == 1:
-            self.z_derivative  =
-            self.sindy_library =
-        else
-            self.z_derivative  =
-            self.sindy_library =
-
+            self.z_derivative_func  = ZDerivativeOrder1(self.activation)
+            self.sindy_library = SINDyLibraryOrder1(self.poly_order, self.include_sine)
+        else:
+            raise ValueError('Invalid model order')
+            # self.z_derivative_func  =
+            # self.sindy_library =
+        if self.c
     def forward(self, x):
         z = self.encoder(x)
 
 
         x_hat = self.decoder(z)
-
-
 
 
 class XcoderHalf(nn.Module):  # Xcoder as in Encoder or Decoder
@@ -117,3 +117,49 @@ class ZDerivativeOrder1(nn.Module):
                 dz = torch.matmul(dz,encoder.layers[i].fc.weight)
         dz = torch.matmul(dz,encoder.layers[-1].fc.weight)
         return dz
+
+
+class SINDyLibraryOrder1(nn.Module):
+    def __init__(self,  poly_order, include_sine):
+        super().__init__()
+        self.poly_order = poly_order
+        self.include_sine = include_sine
+    def forward(self, z):
+        n_times = z.shape[0]
+        latent_dim = z.shape[1]
+
+        library = torch.ones(n_times, 1)
+        library = torch.cat((library, z), 1) # order = 1
+
+        if self.poly_order > 1: # order = 2
+            for i in range(latent_dim):
+                for j in range(i, latent_dim):
+                    library = torch.cat((library, z[:, i]*z[:, j]), 1)
+
+        if self.poly_order > 2:  # order = 3
+            for i in range(latent_dim):
+                for j in range(i, latent_dim):
+                    for k in range(j, latent_dim):
+                        library = torch.cat((library,z[:, i] * z[:, j] * z[:, k]),1)
+
+        if self.poly_order > 3: # order = 4
+            for i in range(latent_dim):
+                for j in range(i, latent_dim):
+                    for k in range(j, latent_dim):
+                        for p in range(k, latent_dim):
+                            library = torch.cat((library,z[:, i] * z[:, j] * z[:, k] * z[:, p]),1)
+
+        if self.poly_order == 5: # order = 5
+            for i in range(latent_dim):
+                for j in range(i, latent_dim):
+                    for k in range(j, latent_dim):
+                        for p in range(k, latent_dim):
+                            for q in range(p, latent_dim):
+                                library = torch.cat((library, z[:, i] * z[:, j] * z[:, k] * z[:, p] * z[:, q]),1)
+        if self.poly_order > 5:
+            raise ValueError('poly_order > 5 not implemented')
+
+        if self.include_sine:
+            library = torch.cat((library,torch.sin(z)),1)
+
+        return library
