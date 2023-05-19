@@ -8,6 +8,7 @@ import numpy as np
 sys.path.append("../../src")
 from example_lorenz import get_lorenz_data
 from sindy_utils import library_size
+from trainer import train
 # from training import train_network
 # import tensorflow as tf
 
@@ -45,7 +46,7 @@ if __name__ == '__main__':
         cfg['coefficient_mask'] = np.ones((cfg['library_dim'], cfg['latent_dim']))
         cfg['save_name'] = 'lorenz_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
 
-        results_dict = train_network(training_data, validation_data, cfg)
+        results_dict = train(training_data, validation_data, cfg)
         # df = df.append({**results_dict, **params}, ignore_index=True)
 
     df.to_pickle('experiment_results_' + datetime.datetime.now().strftime("%Y%m%d%H%M") + '.pkl')
