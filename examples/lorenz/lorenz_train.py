@@ -14,6 +14,7 @@ from trainer import train
 
 
 if __name__ == '__main__':
+    np.random.seed(0)
     # argparse to load yaml for config
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='config.yaml', help='path to config file')
@@ -47,6 +48,7 @@ if __name__ == '__main__':
         cfg['save_name'] = 'lorenz_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
 
         results_dict = train(training_data, validation_data, cfg)
+        print()
         # df = df.append({**results_dict, **params}, ignore_index=True)
 
     df.to_pickle('experiment_results_' + datetime.datetime.now().strftime("%Y%m%d%H%M") + '.pkl')

@@ -1,7 +1,7 @@
 # Data
 noise_strength: 1.e-6
-n_train_ics: 100
-n_val_ics: 10
+n_train_ics: 102
+n_val_ics: 2
 
 # Model and training parameters
 input_dim:  128

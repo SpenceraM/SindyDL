@@ -11,24 +11,22 @@ class AutoEncoder(nn.Module):
 
         self.input_dim  = cfg['input_dim']
         self.latent_dim = cfg['latent_dim']
+        self.widths     = cfg['widths']
         self.activation = cfg['activation']
         self.poly_order = cfg['poly_order']
         if 'include_sine' in cfg.keys():
             self.include_sine = cfg['include_sine']
         else:
             self.include_sine = False
-        self.library_dim = cfg['library_dim']
-        self.model_order = cfg['model_order']
+        self.library_dim = cfg['library_dim']  # number of terms in library
+        self.model_order = cfg['model_order']  # 1 or 2, related to z derivative
         self.sequential_thresholding = cfg['sequential_thresholding']
-
-        # TODO
-        # Not sure if i need tensors here for x, dx, ddx or if they will be passed in forward function
 
         if self.activation == 'linear':
             pass
         else:  # non-linear activation
-            self.encoder = XcoderHalf(self.input_dim, self.latent_dim, [], self.activation)
-            self.decoder = XcoderHalf(self.latent_dim, self.input_dim, [], self.activation)
+            self.encoder = XcoderHalf(self.input_dim, self.latent_dim, self.widths, self.activation)
+            self.decoder = XcoderHalf(self.latent_dim, self.input_dim, self.widths[::-1], self.activation)
 
         if self.model_order == 1:
             self.z_derivative_func = ZDerivativeOrder1(self.activation)
@@ -121,7 +119,10 @@ class FcLayer(nn.Module):
         self.output_dim = output_dim
         self.activation = activation
 
-        self.fc = nn.Linear(self.input_dim, self.output_dim)
+        fc = nn.Linear(self.input_dim, self.output_dim)
+        torch.nn.init.xavier_normal_(fc.weight)
+        torch.nn.init.zeros_(fc.bias)
+        self.fc = fc
 
     def forward(self, x):
         x = self.fc(x)
