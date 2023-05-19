@@ -31,20 +31,57 @@ class AutoEncoder(nn.Module):
             self.decoder = XcoderHalf(self.latent_dim, self.input_dim, [], self.activation)
 
         if self.model_order == 1:
-            self.z_derivative_func  = ZDerivativeOrder1(self.activation)
+            self.z_derivative_func = ZDerivativeOrder1(self.activation)
             self.sindy_library = SINDyLibraryOrder1(self.poly_order, self.include_sine)
         else:
             raise ValueError('Invalid model order')
             # self.z_derivative_func  =
             # self.sindy_library =
+
+        # TODO: initialize with random values
+        sindy_coefficients = torch.empty(self.library_dim, self.latent_dim, requires_grad=True)  # Tensor to hold coefficients
+        torch.nn.init.constant_(sindy_coefficients, 1.0)
+
         if self.sequential_thresholding:
-            self.coefficient_mask = torch.ones((self.library_dim, self.latent_dim))  # Binary tensor to mask out coefficients
+            # Binary tensor to mask out coefficients
+            self.coefficient_mask = torch.ones((self.library_dim, self.latent_dim), requires_grad=False)
 
-    def forward(self, x):
-        z = self.encoder(x)
+    def forward(self, x, dx, ddx=None):
+        z = self.encoder(x)  # z = latent dim
+        x_hat = self.decoder(z) # standard autoencoder output
+
+        dz = self.z_derivative_func(x, dx, self.encoder)
+        Theta = self.sindy_library(z)  # Theta = library dim
+
+        if self.sequential_thresholding:
+            sindy_prediction = torch.matmul(Theta, self.coefficient_mask * self.sindy_coefficients)
+        else:
+            sindy_prediction = torch.matmul(Theta, self.sindy_coefficients)
+
+        if self.model_order == 1:
+            dx_decoded = self.z_derivative_func(z, sindy_prediction, self.decoder)
+        else:
+            raise ValueError('Invalid model order')
+
+        # Create dictionary to hold outputs
+        outputs = {}
+        outputs['x'] = x
+        outputs['x_hat'] = x_hat
+        outputs['dx'] = dx
+        outputs['dx_decoded'] = dx_decoded
+        outputs['z'] = z
+        outputs['dz'] = dz
+        outputs['sindy_coefficients'] = self.sindy_coefficients
+        outputs['coefficient_mask'] = self.coefficient_mask
+        outputs['Theta'] = Theta
+        if self.model_order == 1:
+            outputs['dz_predict'] = sindy_prediction
+        else:
+            raise ValueError('Invalid model order')
+
+        return outputs
 
 
-        x_hat = self.decoder(z)
 
 
 class XcoderHalf(nn.Module):  # Xcoder as in Encoder or Decoder
