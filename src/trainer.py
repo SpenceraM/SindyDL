@@ -24,7 +24,9 @@ def train(train_data, val_dat, cfg):
         for batch_idx in range(n_batches):
             idxs4batch = np.arange(batch_idx * cfg['batch_size'], (batch_idx + 1) * cfg['batch_size'])
             train_dict = create_feed_dictionary(train_data, cfg, idxs=idxs4batch)
+            out = model(train_dict['x:0'], train_dict['dx:0'])
             print()
+
 
 def create_feed_dictionary(data, cfg, idxs=None):
     """
@@ -48,11 +50,11 @@ def create_feed_dictionary(data, cfg, idxs=None):
     if idxs is None:
         idxs = np.arange(data['x'].shape[0])
     feed_dict = {}
-    feed_dict['x:0'] = data['x'][idxs]
-    feed_dict['dx:0'] = data['dx'][idxs]
+    feed_dict['x:0'] = torch.from_numpy(data['x'][idxs]).float()
+    feed_dict['dx:0'] = torch.from_numpy(data['dx'][idxs]).float()
     if cfg['model_order'] == 2:
         feed_dict['ddx:0'] = data['ddx'][idxs]
-    if cfg['sequential_thresholding']:
-        feed_dict['coefficient_mask:0'] = cfg['coefficient_mask']
+    # if cfg['sequential_thresholding']:
+    #     feed_dict['coefficient_mask:0'] = cfg['coefficient_mask']
     feed_dict['learning_rate:0'] = cfg['learning_rate']
     return feed_dict
