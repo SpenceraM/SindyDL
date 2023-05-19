@@ -37,8 +37,8 @@ class AutoEncoder(nn.Module):
             # self.sindy_library =
 
         # TODO: initialize with random values
-        sindy_coefficients = torch.empty(self.library_dim, self.latent_dim, requires_grad=True)  # Tensor to hold coefficients
-        torch.nn.init.constant_(sindy_coefficients, 1.0)
+        self.sindy_coefficients = torch.empty(self.library_dim, self.latent_dim, requires_grad=True)  # Tensor to hold coefficients
+        torch.nn.init.constant_(self.sindy_coefficients, 1.0)
 
         if self.sequential_thresholding:
             # Binary tensor to mask out coefficients
@@ -140,22 +140,25 @@ class ZDerivativeOrder1(nn.Module):
         if self.activation == 'elu':
             for i in range(len(encoder.layers)-1):
                 x = encoder.layers[i](x)
-                dz = torch.multiply(torch.min(torch.exp(x), torch.ones_like(x)), torch.matmul(dz,encoder.layers[i].fc.weight))
-                x = nn.ELU(x)
+                dz = torch.multiply(torch.min(torch.exp(x), torch.ones_like(x)), torch.matmul(dz,encoder.layers[i].fc.weight))  # TODO check transpose
+                f = nn.ELU()
+                x = f(x)
         if self.activation == 'relu':
             for i in range(len(encoder.layers)-1):
                 x = encoder.layers[i](x)
-                dz = torch.multiply(torch.max(torch.sign(x),0), torch.matmul(dz,encoder.layers[i].fc.weight))
-                x = nn.ReLU(x)
+                dz = torch.multiply(torch.max(torch.sign(x),0), torch.matmul(dz,encoder.layers[i].fc.weight))  # TODO check transpose
+                f = nn.ReLU()
+                x = f(x)
         if self.activation == 'sigmoid':
             for i in range(len(encoder.layers)-1):
                 x = encoder.layers[i](x)
-                x = nn.Sigmoid(x)
-                dz = torch.multiply(torch.multiply(x,1-x), torch.matmul(dz,encoder.layers[i].fc.weight))
+                f = nn.Sigmoid()
+                x = f(x)
+                dz = torch.multiply(torch.multiply(x,1-x), torch.matmul(dz,torch.transpose(encoder.layers[i].fc.weight,0,1)))
         else:
             for i in range(len(encoder.layers)-1):
                 dz = torch.matmul(dz,encoder.layers[i].fc.weight)
-        dz = torch.matmul(dz,encoder.layers[-1].fc.weight)
+        dz = torch.matmul(dz,torch.transpose(encoder.layers[-1].fc.weight,0,1))
         return dz
 
 
@@ -174,28 +177,28 @@ class SINDyLibraryOrder1(nn.Module):
         if self.poly_order > 1: # order = 2
             for i in range(latent_dim):
                 for j in range(i, latent_dim):
-                    library = torch.cat((library, z[:, i]*z[:, j]), 1)
+                    library = torch.cat((library, torch.unsqueeze(z[:, i]*z[:, j],1)), 1)
 
         if self.poly_order > 2:  # order = 3
             for i in range(latent_dim):
                 for j in range(i, latent_dim):
                     for k in range(j, latent_dim):
-                        library = torch.cat((library,z[:, i] * z[:, j] * z[:, k]),1)
+                        library = torch.cat((library,torch.unsqueeze(z[:, i] * z[:, j] * z[:, k],1)),1)
 
         if self.poly_order > 3: # order = 4
             for i in range(latent_dim):
                 for j in range(i, latent_dim):
                     for k in range(j, latent_dim):
                         for p in range(k, latent_dim):
-                            library = torch.cat((library,z[:, i] * z[:, j] * z[:, k] * z[:, p]),1)
+                            library = torch.cat((library,torch.unsqueeze(z[:, i] * z[:, j] * z[:, k] * z[:, p],1)),1)
 
-        if self.poly_order == 5: # order = 5
+        if self.poly_order == 5:  # order = 5
             for i in range(latent_dim):
                 for j in range(i, latent_dim):
                     for k in range(j, latent_dim):
                         for p in range(k, latent_dim):
                             for q in range(p, latent_dim):
-                                library = torch.cat((library, z[:, i] * z[:, j] * z[:, k] * z[:, p] * z[:, q]),1)
+                                library = torch.cat((library, torch.unsqueeze(z[:, i] * z[:, j] * z[:, k] * z[:, p] * z[:, q],1)),1)
         if self.poly_order > 5:
             raise ValueError('poly_order > 5 not implemented')
 
