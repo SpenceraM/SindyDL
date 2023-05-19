@@ -11,6 +11,7 @@ from sindy_utils import library_size
 # from training import train_network
 # import tensorflow as tf
 
+
 if __name__ == '__main__':
     # argparse to load yaml for config
     parser = argparse.ArgumentParser()
@@ -30,7 +31,7 @@ if __name__ == '__main__':
     training_data = get_lorenz_data(cfg.get('n_train_ics',100), noise_strength=cfg.get('noise_strength', 1e-6))
     print('Generating validation data')
     validation_data = get_lorenz_data(cfg.get('n_val_ics',10), noise_strength=cfg.get('noise_strength', 1e-6))
-
+    print('Finished generating data\n')
     # Finish setting up model and training parameters
     cfg['library_dim'] = library_size(cfg['latent_dim'], cfg['poly_order'], cfg['include_sine'], True)
     cfg['coefficient_mask'] = np.ones((cfg['library_dim'], cfg['latent_dim']))
@@ -45,6 +46,6 @@ if __name__ == '__main__':
         cfg['save_name'] = 'lorenz_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
 
         results_dict = train_network(training_data, validation_data, cfg)
-        df = df.append({**results_dict, **params}, ignore_index=True)
+        # df = df.append({**results_dict, **params}, ignore_index=True)
 
     df.to_pickle('experiment_results_' + datetime.datetime.now().strftime("%Y%m%d%H%M") + '.pkl')
