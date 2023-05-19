@@ -20,7 +20,7 @@ class AutoEncoder(nn.Module):
         self.library_dim = cfg['library_dim']
         self.model_order = cfg['model_order']
         self.sequential_thresholding = cfg['sequential_thresholding']
-        
+
         # TODO
         # Not sure if i need tensors here for x, dx, ddx or if they will be passed in forward function
 
@@ -37,7 +37,9 @@ class AutoEncoder(nn.Module):
             raise ValueError('Invalid model order')
             # self.z_derivative_func  =
             # self.sindy_library =
-        if self.c
+        if self.sequential_thresholding:
+            self.coefficient_mask = torch.ones((self.library_dim, self.latent_dim))  # Binary tensor to mask out coefficients
+
     def forward(self, x):
         z = self.encoder(x)
 
