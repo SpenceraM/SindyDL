@@ -13,7 +13,7 @@ include_sine:  False
 # sequential thresholding parameters
 sequential_thresholding:  True
 coefficient_threshold:  0.1
-threshold_frequency:  500
+threshold_frequency:  5
 coefficient_initialization:  'constant'
 
 # loss function weighting

@@ -36,6 +36,10 @@ def train(train_data, val_dat, cfg):
             optimizer.step()
             # print()
 
+        # Threshold the coefficient mask
+        if cfg['sequential_thresholding'] and (epoch_idx % cfg['threshold_frequency'] == 0) and (epoch_idx > 0):
+            model.threshold_mask()
+
 
 def create_feed_dictionary(data, cfg, idxs=None):
     """

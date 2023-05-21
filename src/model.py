@@ -14,6 +14,7 @@ class AutoEncoder(nn.Module):
         self.widths     = cfg['widths']
         self.activation = cfg['activation']
         self.poly_order = cfg['poly_order']
+        self.coefficient_threshold = cfg['coefficient_threshold']
         if 'include_sine' in cfg.keys():
             self.include_sine = cfg['include_sine']
         else:
@@ -79,7 +80,10 @@ class AutoEncoder(nn.Module):
 
         return outputs
 
-
+    def threshold_mask(self):
+        with torch.no_grad():
+            threshold = self.coefficient_threshold
+            self.coefficient_mask[torch.abs(self.sindy_coefficients) < threshold] = 0
 
 
 class XcoderHalf(nn.Module):  # Xcoder as in Encoder or Decoder
