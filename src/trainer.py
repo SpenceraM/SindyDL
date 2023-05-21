@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from model import AutoEncoder
+from model import AutoEncoder, compound_loss
 
 # class Trainer:
 #     def __init__(self, cfg):
@@ -17,15 +17,24 @@ from model import AutoEncoder
 def train(train_data, val_dat, cfg):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # not used for debugging
     model = AutoEncoder(cfg)#.to(device)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
-    # criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
+    criterion = compound_loss
     n_batches = cfg['epoch_size']//cfg['batch_size']
     for epoch_idx in range(cfg['max_epochs']):
         for batch_idx in range(n_batches):
+            # Zero your gradients for every batch!
+            optimizer.zero_grad()
+
             idxs4batch = np.arange(batch_idx * cfg['batch_size'], (batch_idx + 1) * cfg['batch_size'])
             train_dict = create_feed_dictionary(train_data, cfg, idxs=idxs4batch)
             out = model(train_dict['x:0'], train_dict['dx:0'])
-            print()
+
+            loss, loss_refinement, losses = criterion(out, train_dict['dx:0'], cfg)
+            loss.backward()
+            print(loss.item())
+
+            optimizer.step()
+            # print()
 
 
 def create_feed_dictionary(data, cfg, idxs=None):

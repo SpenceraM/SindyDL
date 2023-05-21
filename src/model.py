@@ -206,3 +206,37 @@ class SINDyLibraryOrder1(nn.Module):
             library = torch.cat((library,torch.sin(z)),1)
 
         return library
+
+
+def compound_loss(pred, target, cfg):
+    x_input = pred['x']
+    x_output = pred['x_hat']
+    if cfg['model_order'] == 1:
+        dz = pred['dz']
+        dz_predict = pred['dz_predict']
+        dx = pred['dx']
+        dx_decoded = pred['dx_decoded']
+    else:
+        raise ValueError('Invalid model order')
+    sindy_coeff = pred['sindy_coefficients'] * pred['coefficient_mask']
+    losses = {}
+    losses['decoder'] =nn.functional.mse_loss(x_output, x_input)   # reconstruction loss
+    if cfg['model_order'] == 1:
+        losses['sindy_z'] = nn.functional.mse_loss(dz, dz_predict)  # SINDy loss in z
+        losses['sindy_x'] = nn.functional.mse_loss(dx, dx_decoded)  # SINDy loss in x
+    else:
+        raise ValueError('Invalid model order')
+    losses['sindy_regularization'] = torch.abs(sindy_coeff).mean()  # Sparsify SINDy coefficients
+
+    # combine losses
+    loss = cfg['loss_weight_decoder'] * losses['decoder'] \
+           + cfg['loss_weight_sindy_z'] * losses['sindy_z'] \
+           + cfg['loss_weight_sindy_x'] * losses['sindy_x'] \
+           + cfg['loss_weight_sindy_regularization'] * losses['sindy_regularization']
+
+    loss_refinement = cfg['loss_weight_decoder'] * losses['decoder'] \
+                      + cfg['loss_weight_sindy_z'] * losses['sindy_z'] \
+                      + cfg['loss_weight_sindy_x'] * losses['sindy_x']
+
+    return loss, loss_refinement, losses
+
