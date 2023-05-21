@@ -31,7 +31,7 @@ def train(train_data, val_dat, cfg):
 
             loss, loss_refinement, losses = criterion(out, train_dict['dx:0'], cfg)
             loss.backward()
-            print(loss.item())
+            print(epoch_idx, loss.item())
 
             optimizer.step()
             # print()
@@ -39,6 +39,7 @@ def train(train_data, val_dat, cfg):
         # Threshold the coefficient mask
         if cfg['sequential_thresholding'] and (epoch_idx % cfg['threshold_frequency'] == 0) and (epoch_idx > 0):
             model.threshold_mask()
+    print()
 
 
 def create_feed_dictionary(data, cfg, idxs=None):

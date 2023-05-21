@@ -1,6 +1,6 @@
 # Data
 noise_strength: 1.e-6
-n_train_ics: 102
+n_train_ics: 500
 n_val_ics: 2
 
 # Model and training parameters
@@ -12,7 +12,7 @@ include_sine:  False
 
 # sequential thresholding parameters
 sequential_thresholding:  True
-coefficient_threshold:  0.1
+coefficient_threshold:  0.2
 threshold_frequency:  5
 coefficient_initialization:  'constant'
 
@@ -33,6 +33,6 @@ print_progress:  True
 print_frequency:  5
 
 # training time cutoffs
-max_epochs:  5001
+max_epochs:  500
 refinement_epochs:  1001
 num_experiments:  1

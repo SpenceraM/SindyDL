@@ -38,7 +38,7 @@ class AutoEncoder(nn.Module):
             # self.sindy_library =
 
         # TODO: initialize with random values
-        self.sindy_coefficients = torch.empty(self.library_dim, self.latent_dim, requires_grad=True)  # Tensor to hold coefficients
+        self.sindy_coefficients = nn.Parameter(torch.empty(self.library_dim, self.latent_dim, requires_grad=True))  # Tensor to hold coefficients
         torch.nn.init.constant_(self.sindy_coefficients, 1.0)
 
         if self.sequential_thresholding:
@@ -83,6 +83,8 @@ class AutoEncoder(nn.Module):
     def threshold_mask(self):
         with torch.no_grad():
             threshold = self.coefficient_threshold
+            if torch.any(torch.abs(self.sindy_coefficients) < threshold):
+                print('Thresholding coefficients')
             self.coefficient_mask[torch.abs(self.sindy_coefficients) < threshold] = 0
 
 
