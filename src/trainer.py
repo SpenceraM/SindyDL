@@ -1,6 +1,6 @@
 import os
-import numpy as np
 import torch
+import numpy as np
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -12,6 +12,7 @@ def train(train_data, val_dat, cfg):
     model = AutoEncoder(cfg).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
     criterion = compound_loss
+    
     n_batches = cfg['epoch_size']//cfg['batch_size']
     for epoch_idx in range(cfg['max_epochs']):
         for batch_idx in range(n_batches):
@@ -25,14 +26,27 @@ def train(train_data, val_dat, cfg):
             loss, loss_refinement, losses = criterion(out, train_dict['dx:0'].to(device), cfg)
             loss.backward()
             optimizer.step()
-        print(epoch_idx, loss.item())
-            # print()
 
+        print(epoch_idx, loss.item())
         # Threshold the coefficient mask
         if cfg['sequential_thresholding'] and (epoch_idx % cfg['threshold_frequency'] == 0) and (epoch_idx > 0):
             model.threshold_mask()
-    print()
 
+    # Refinement stage
+    print('REFINEMENT')
+    n_refinement_batches = cfg['refinement_epochs']//cfg['batch_size']
+    for epoch_idx in range(cfg['refinement_epochs']):
+        for batch_idx in range(n_refinement_batches):
+            # Zero your gradients for every batch!
+            optimizer.zero_grad()
+
+            idxs4batch = np.arange(batch_idx * cfg['batch_size'], (batch_idx + 1) * cfg['batch_size'])
+            train_dict = create_feed_dictionary(train_data, cfg, idxs=idxs4batch)
+            out = model(train_dict['x:0'].to(device), train_dict['dx:0'].to(device))
+
+            loss, loss_refinement, losses = criterion(out, train_dict['dx:0'].to(device), cfg)
+            loss_refinement.backward()
+            optimizer.step()
 
 def create_feed_dictionary(data, cfg, idxs=None):
     """
