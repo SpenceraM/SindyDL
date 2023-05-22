@@ -6,17 +6,10 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from model import AutoEncoder, compound_loss
 
-# class Trainer:
-#     def __init__(self, cfg):
-#         self.cfg = cfg
-#         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#         self.model = AutoEncoder(cfg).to(self.device)
-#         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.cfg['learning_rate'])
-#         self.criterion = nn.MSELoss()
 
 def train(train_data, val_dat, cfg):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # not used for debugging
-    model = AutoEncoder(cfg)#.to(device)
+    model = AutoEncoder(cfg).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
     criterion = compound_loss
     n_batches = cfg['epoch_size']//cfg['batch_size']
@@ -27,13 +20,12 @@ def train(train_data, val_dat, cfg):
 
             idxs4batch = np.arange(batch_idx * cfg['batch_size'], (batch_idx + 1) * cfg['batch_size'])
             train_dict = create_feed_dictionary(train_data, cfg, idxs=idxs4batch)
-            out = model(train_dict['x:0'], train_dict['dx:0'])
+            out = model(train_dict['x:0'].to(device), train_dict['dx:0'].to(device))
 
-            loss, loss_refinement, losses = criterion(out, train_dict['dx:0'], cfg)
+            loss, loss_refinement, losses = criterion(out, train_dict['dx:0'].to(device), cfg)
             loss.backward()
-            print(epoch_idx, loss.item())
-
             optimizer.step()
+        print(epoch_idx, loss.item())
             # print()
 
         # Threshold the coefficient mask

@@ -8,7 +8,6 @@ from torchvision import datasets, transforms
 class AutoEncoder(nn.Module):
     def __init__(self, cfg):
         super().__init__()
-
         self.input_dim  = cfg['input_dim']
         self.latent_dim = cfg['latent_dim']
         self.widths     = cfg['widths']
@@ -43,14 +42,14 @@ class AutoEncoder(nn.Module):
 
         if self.sequential_thresholding:
             # Binary tensor to mask out coefficients
-            self.coefficient_mask = torch.ones((self.library_dim, self.latent_dim), requires_grad=False)
+            self.coefficient_mask = nn.Parameter(torch.ones((self.library_dim, self.latent_dim), requires_grad=False))
 
     def forward(self, x, dx, ddx=None):
         z = self.encoder(x)  # z = latent dim
         x_hat = self.decoder(z) # standard autoencoder output
 
         dz = self.z_derivative_func(x, dx, self.encoder)
-        Theta = self.sindy_library(z)  # Theta = library dim
+        Theta = self.sindy_library(z).to(z.device)  # Theta = library dim
 
         if self.sequential_thresholding:
             sindy_prediction = torch.matmul(Theta, self.coefficient_mask * self.sindy_coefficients)
@@ -177,7 +176,7 @@ class SINDyLibraryOrder1(nn.Module):
         n_times = z.shape[0]
         latent_dim = z.shape[1]
 
-        library = torch.ones(n_times, 1)
+        library = torch.ones(n_times, 1, device=z.device)
         library = torch.cat((library, z), 1) # order = 1
 
         if self.poly_order > 1: # order = 2
