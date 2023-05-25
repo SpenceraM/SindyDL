@@ -12,7 +12,7 @@ def train(train_data, val_dat, cfg):
     model = AutoEncoder(cfg).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
     criterion = compound_loss
-    
+
     n_batches = cfg['epoch_size']//cfg['batch_size']
     for epoch_idx in range(cfg['max_epochs']):
         for batch_idx in range(n_batches):
@@ -34,9 +34,8 @@ def train(train_data, val_dat, cfg):
 
     # Refinement stage
     print('REFINEMENT')
-    n_refinement_batches = cfg['refinement_epochs']//cfg['batch_size']
     for epoch_idx in range(cfg['refinement_epochs']):
-        for batch_idx in range(n_refinement_batches):
+        for batch_idx in range(n_batches):
             # Zero your gradients for every batch!
             optimizer.zero_grad()
 
@@ -47,6 +46,7 @@ def train(train_data, val_dat, cfg):
             loss, loss_refinement, losses = criterion(out, train_dict['dx:0'].to(device), cfg)
             loss_refinement.backward()
             optimizer.step()
+        print(epoch_idx, loss_refinement.item())
 
 def create_feed_dictionary(data, cfg, idxs=None):
     """
