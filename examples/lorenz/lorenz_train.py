@@ -51,4 +51,5 @@ if __name__ == '__main__':
         print()
         # df = df.append({**results_dict, **params}, ignore_index=True)
 
+
     df.to_pickle('experiment_results_' + datetime.datetime.now().strftime("%Y%m%d%H%M") + '.pkl')

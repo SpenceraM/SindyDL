@@ -13,6 +13,9 @@ def train(train_data, val_dat, cfg):
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
     criterion = compound_loss
 
+    val_dict = create_feed_dictionary(train_data, cfg, idxs=None)
+    validation_losses = []
+
     n_batches = cfg['epoch_size']//cfg['batch_size']
     for epoch_idx in range(cfg['max_epochs']):
         for batch_idx in range(n_batches):
@@ -27,8 +30,16 @@ def train(train_data, val_dat, cfg):
             loss.backward()
             optimizer.step()
 
-        print(epoch_idx, loss.item())
-        # Threshold the coefficient mask
+        if epoch_idx % cfg['val_frequency'] == 0:
+            # run on validation data
+            with torch.no_grad():
+                val_out = model(val_dict['x:0'].to(device), val_dict['dx:0'].to(device))
+                val_loss, val_loss_refinement, val_losses = criterion(val_out, val_dict['dx:0'].to(device), cfg)
+            if cfg['print_progress']:
+                print_progress(epoch_idx, val_loss.item(), val_out)
+            #   print_progress(sess, i, loss, losses, train_dict, validation_dict, x_norm, sindy_predict_norm_x))
+
+            # Threshold the coefficient mask
         if cfg['sequential_thresholding'] and (epoch_idx % cfg['threshold_frequency'] == 0) and (epoch_idx > 0):
             model.threshold_mask()
 
@@ -47,6 +58,7 @@ def train(train_data, val_dat, cfg):
             loss_refinement.backward()
             optimizer.step()
         print(epoch_idx, loss_refinement.item())
+
 
 def create_feed_dictionary(data, cfg, idxs=None):
     """
@@ -78,3 +90,9 @@ def create_feed_dictionary(data, cfg, idxs=None):
     #     feed_dict['coefficient_mask:0'] = cfg['coefficient_mask']
     feed_dict['learning_rate:0'] = cfg['learning_rate']
     return feed_dict
+
+
+def print_progress(epoch_idx, loss, net_output):
+    nnz = torch.nonzero(net_output['coefficient_mask'].detach().cpu()).shape[0]
+    mask_size = torch.numel(net_output['coefficient_mask'].detach().cpu())
+    print('Epoch {epoch_idx}: Loss {loss:.4f}, NumEl {nnz}/{mask_size}'.format(epoch_idx=epoch_idx, loss=loss,nnz=nnz, mask_size=mask_size))
