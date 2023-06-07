@@ -32,12 +32,14 @@ def train(train_data, val_dat, cfg):
 
         if epoch_idx % cfg['val_frequency'] == 0:
             # run on validation data
-            with torch.no_grad():
-                val_out = model(val_dict['x:0'].to(device), val_dict['dx:0'].to(device))
-                val_loss, val_loss_refinement, val_losses = criterion(val_out, val_dict['dx:0'].to(device), cfg)
+            del out, loss, losses, loss_refinement
+            model.eval()
+            val_out = model(val_dict['x:0'].to(device), val_dict['dx:0'].to(device))
+            val_loss, val_loss_refinement, val_losses = criterion(val_out, val_dict['dx:0'].to(device), cfg)
+            model.train()
             if cfg['print_progress']:
                 print_progress(epoch_idx, val_loss.item(), val_out)
-            #   print_progress(sess, i, loss, losses, train_dict, validation_dict, x_norm, sindy_predict_norm_x))
+            del val_loss, val_losses, val_loss_refinement, val_out
 
             # Threshold the coefficient mask
         if cfg['sequential_thresholding'] and (epoch_idx % cfg['threshold_frequency'] == 0) and (epoch_idx > 0):
