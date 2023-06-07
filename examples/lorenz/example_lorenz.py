@@ -52,6 +52,7 @@ def lorenz_coefficients(normalization, poly_order=3, sigma=10., beta=8/3, rho=28
     Xi[6,1] = -normalization[1]/(normalization[0]*normalization[2])
     Xi[3,2] = -beta
     Xi[5,2] = normalization[2]/(normalization[0]*normalization[1])
+    print(Xi)
     return Xi
 
 
