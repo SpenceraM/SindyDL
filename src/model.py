@@ -42,7 +42,7 @@ class AutoEncoder(nn.Module):
 
         if self.sequential_thresholding:
             # Binary tensor to mask out coefficients
-            self.coefficient_mask = nn.Parameter(torch.ones((self.library_dim, self.latent_dim), requires_grad=False))
+            self.coefficient_mask = nn.Parameter(torch.ones(self.library_dim, self.latent_dim)).requires_grad_(False)
 
     def forward(self, x, dx, ddx=None):
         z = self.encoder(x)  # z = latent dim
@@ -82,9 +82,9 @@ class AutoEncoder(nn.Module):
     def threshold_mask(self):
         with torch.no_grad():
             threshold = self.coefficient_threshold
-            if torch.any(torch.abs(self.sindy_coefficients) < threshold):
-                print('Thresholding coefficients')
             self.coefficient_mask[torch.abs(self.sindy_coefficients) < threshold] = 0
+            print(self.coefficient_mask)
+            print(self.sindy_coefficients)
 
 
 class XcoderHalf(nn.Module):  # Xcoder as in Encoder or Decoder
