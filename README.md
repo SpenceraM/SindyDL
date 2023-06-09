@@ -1,4 +1,4 @@
-# SindyDL
+# SINDyDL
 
 This repo is an unofficial PyTorch 2.x implementation of the paper 
 [Data-Driven Discovery of Coordinates and Governing Equations
