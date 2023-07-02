@@ -7,13 +7,13 @@ from torchvision import datasets, transforms
 from model import AutoEncoder, compound_loss
 
 
-def train(train_data, val_dat, cfg):
+def train(train_data, val_data, cfg):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # not used for debugging
     model = AutoEncoder(cfg).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg['learning_rate'])
     criterion = compound_loss
 
-    val_dict = create_feed_dictionary(train_data, cfg, idxs=None)
+    val_dict = create_feed_dictionary(val_data, cfg, idxs=None)
     validation_losses = []
 
     n_batches = cfg['epoch_size']//cfg['batch_size']
@@ -88,8 +88,8 @@ def create_feed_dictionary(data, cfg, idxs=None):
     feed_dict['dx:0'] = torch.from_numpy(data['dx'][idxs]).float()
     if cfg['model_order'] == 2:
         feed_dict['ddx:0'] = data['ddx'][idxs]
-    # if cfg['sequential_thresholding']:
-    #     feed_dict['coefficient_mask:0'] = cfg['coefficient_mask']
+    if cfg['sequential_thresholding']:
+        feed_dict['coefficient_mask:0'] = cfg['coefficient_mask']
     feed_dict['learning_rate:0'] = cfg['learning_rate']
     return feed_dict
 
