@@ -30,9 +30,9 @@ if __name__ == '__main__':
 
     # generate training, validation, testing data
     print('Generating training data')
-    training_data = get_lorenz_data(cfg.get('n_train_ics',100), noise_strength=cfg.get('noise_strength', 1e-6))
+    training_data = get_lorenz_data(cfg.get('n_train_ics',1024), noise_strength=cfg.get('noise_strength', 1e-6))
     print('Generating validation data')
-    validation_data = get_lorenz_data(cfg.get('n_val_ics',10), noise_strength=cfg.get('noise_strength', 1e-6))
+    validation_data = get_lorenz_data(cfg.get('n_val_ics',20), noise_strength=cfg.get('noise_strength', 1e-6))
     print('Finished generating data\n')
     # Finish setting up model and training parameters
     cfg['library_dim'] = library_size(cfg['latent_dim'], cfg['poly_order'], cfg['include_sine'], True)
