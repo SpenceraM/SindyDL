@@ -143,21 +143,21 @@ class ZDerivativeOrder1(nn.Module):
     def forward(self, x, dx, encoder):
         dz = dx
         if self.activation == 'elu':
+            f = nn.ELU()
             for i in range(len(encoder.layers)-1):
-                x = encoder.layers[i](x)
+                x = torch.matmul(x,torch.transpose(encoder.layers[i].fc.weight,0,1)) + encoder.layers[i].fc.bias
                 dz = torch.multiply(torch.min(torch.exp(x), torch.ones_like(x)), torch.matmul(dz,encoder.layers[i].fc.weight))  # TODO check transpose
-                f = nn.ELU()
                 x = f(x)
         if self.activation == 'relu':
+            f = nn.ReLU()
             for i in range(len(encoder.layers)-1):
-                x = encoder.layers[i](x)
+                x = torch.matmul(x,torch.transpose(encoder.layers[i].fc.weight,0,1)) + encoder.layers[i].fc.bias
                 dz = torch.multiply(torch.max(torch.sign(x),0), torch.matmul(dz,encoder.layers[i].fc.weight))  # TODO check transpose
-                f = nn.ReLU()
                 x = f(x)
         if self.activation == 'sigmoid':
+            f = nn.Sigmoid()
             for i in range(len(encoder.layers)-1):
-                x = encoder.layers[i](x)
-                f = nn.Sigmoid()
+                x = torch.matmul(x,torch.transpose(encoder.layers[i].fc.weight,0,1)) + encoder.layers[i].fc.bias
                 x = f(x)
                 dz = torch.multiply(torch.multiply(x,1-x), torch.matmul(dz,torch.transpose(encoder.layers[i].fc.weight,0,1)))
         else:
