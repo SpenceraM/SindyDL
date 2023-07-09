@@ -109,7 +109,7 @@ class XcoderHalf(nn.Module):  # Xcoder as in Encoder or Decoder
                 self.layers.append(FcLayer(input_dim, widths[i], activation))
             else:
                 self.layers.append(FcLayer(widths[i-1], widths[i], activation))
-        self.layers.append(FcLayer(widths[-1], output_dim, activation))
+        self.layers.append(FcLayer(widths[-1], output_dim, None))
 
     def forward(self, x):
         for layer in self.layers:
@@ -126,12 +126,14 @@ class FcLayer(nn.Module):
 
         fc = nn.Linear(self.input_dim, self.output_dim)
         torch.nn.init.xavier_normal_(fc.weight)
+        # torch.nn.init.constant_(fc.weight, 1.0)
         torch.nn.init.zeros_(fc.bias)
         self.fc = fc
 
     def forward(self, x):
         x = self.fc(x)
-        x = self.activation(x)
+        if self.activation is not None:
+            x = self.activation(x)
         return x
 
 
@@ -140,30 +142,30 @@ class ZDerivativeOrder1(nn.Module):
         super().__init__()
         self.activation = activation
 
-    def forward(self, x, dx, encoder):
+    def forward(self, x, dx, coder):
         dz = dx
         if self.activation == 'elu':
             f = nn.ELU()
-            for i in range(len(encoder.layers)-1):
-                x = torch.matmul(x,torch.transpose(encoder.layers[i].fc.weight,0,1)) + encoder.layers[i].fc.bias
-                dz = torch.multiply(torch.min(torch.exp(x), torch.ones_like(x)), torch.matmul(dz,encoder.layers[i].fc.weight))  # TODO check transpose
+            for i in range(len(coder.layers) - 1):
+                x = torch.matmul(x, torch.transpose(coder.layers[i].fc.weight, 0, 1)) + coder.layers[i].fc.bias
+                dz = torch.multiply(torch.min(torch.exp(x), torch.ones_like(x)), torch.matmul(dz, coder.layers[i].fc.weight))  # TODO check transpose
                 x = f(x)
         if self.activation == 'relu':
             f = nn.ReLU()
-            for i in range(len(encoder.layers)-1):
-                x = torch.matmul(x,torch.transpose(encoder.layers[i].fc.weight,0,1)) + encoder.layers[i].fc.bias
-                dz = torch.multiply(torch.max(torch.sign(x),0), torch.matmul(dz,encoder.layers[i].fc.weight))  # TODO check transpose
+            for i in range(len(coder.layers) - 1):
+                x = torch.matmul(x, torch.transpose(coder.layers[i].fc.weight, 0, 1)) + coder.layers[i].fc.bias
+                dz = torch.multiply(torch.max(torch.sign(x),0), torch.matmul(dz, coder.layers[i].fc.weight))  # TODO check transpose
                 x = f(x)
         if self.activation == 'sigmoid':
             f = nn.Sigmoid()
-            for i in range(len(encoder.layers)-1):
-                x = torch.matmul(x,torch.transpose(encoder.layers[i].fc.weight,0,1)) + encoder.layers[i].fc.bias
+            for i in range(len(coder.layers) - 1):
+                x = torch.matmul(x, torch.transpose(coder.layers[i].fc.weight, 0, 1)) + coder.layers[i].fc.bias
                 x = f(x)
-                dz = torch.multiply(torch.multiply(x,1-x), torch.matmul(dz,torch.transpose(encoder.layers[i].fc.weight,0,1)))
+                dz = torch.multiply(torch.multiply(x,1-x), torch.matmul(dz, torch.transpose(coder.layers[i].fc.weight, 0, 1)))
         else:
-            for i in range(len(encoder.layers)-1):
-                dz = torch.matmul(dz,encoder.layers[i].fc.weight)
-        dz = torch.matmul(dz,torch.transpose(encoder.layers[-1].fc.weight,0,1))
+            for i in range(len(coder.layers) - 1):
+                dz = torch.matmul(dz, coder.layers[i].fc.weight)
+        dz = torch.matmul(dz, torch.transpose(coder.layers[-1].fc.weight, 0, 1))
         return dz
 
 
