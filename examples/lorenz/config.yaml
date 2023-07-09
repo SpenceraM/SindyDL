@@ -13,7 +13,7 @@ include_sine:  False
 # sequential thresholding parameters
 sequential_thresholding:  True
 coefficient_threshold:  0.1
-threshold_frequency:  50 #500
+threshold_frequency:  500 #500
 coefficient_initialization:  'constant'
 
 # loss function weighting
@@ -30,7 +30,7 @@ batch_size:  1024
 learning_rate:  1.e-3
 
 print_progress:  True
-val_frequency:  5
+val_frequency:  10
 
 # training time cutoffs
 max_epochs:  5001
