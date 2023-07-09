@@ -213,22 +213,22 @@ class SINDyLibraryOrder1(nn.Module):
         return library
 
 
-def compound_loss(pred, target, cfg):
-    x_input = pred['x']
-    x_output = pred['x_hat']
+def compound_loss(network_out, cfg):
+    x_input = network_out['x']
+    x_output = network_out['x_hat']
     if cfg['model_order'] == 1:
-        dz = pred['dz']
-        dz_predict = pred['dz_predict']
-        dx = pred['dx']
-        dx_decoded = pred['dx_decoded']
+        dz = network_out['dz']
+        dz_predict = network_out['dz_predict']
+        dx = network_out['dx']
+        dx_decoded = network_out['dx_decoded']
     else:
         raise ValueError('Invalid model order')
-    sindy_coeff = pred['sindy_coefficients'] * pred['coefficient_mask']
+    sindy_coeff = network_out['sindy_coefficients'] * network_out['coefficient_mask']
     losses = {}
-    losses['decoder'] =nn.functional.mse_loss(x_output, x_input)   # reconstruction loss
+    losses['decoder'] =nn.functional.mse_loss(x_output, x_input, reduction='mean')   # reconstruction loss
     if cfg['model_order'] == 1:
-        losses['sindy_z'] = nn.functional.mse_loss(dz, dz_predict)  # SINDy loss in z
-        losses['sindy_x'] = nn.functional.mse_loss(dx, dx_decoded)  # SINDy loss in x
+        losses['sindy_z'] = nn.functional.mse_loss(dz, dz_predict, reduction='mean')  # SINDy loss in z
+        losses['sindy_x'] = nn.functional.mse_loss(dx, dx_decoded, reduction='mean')  # SINDy loss in x
     else:
         raise ValueError('Invalid model order')
     losses['sindy_regularization'] = torch.abs(sindy_coeff).mean()  # Sparsify SINDy coefficients

@@ -26,7 +26,7 @@ def train(train_data, val_data, cfg):
             train_dict = create_feed_dictionary(train_data, cfg, idxs=idxs4batch)
             out = model(train_dict['x:0'].to(device), train_dict['dx:0'].to(device))
 
-            loss, loss_refinement, losses = criterion(out, train_dict['dx:0'].to(device), cfg)
+            loss, loss_refinement, losses = criterion(out, cfg)
             loss.backward()
             optimizer.step()
 
@@ -35,7 +35,7 @@ def train(train_data, val_data, cfg):
             del out, loss, losses, loss_refinement
             model.eval()
             val_out = model(val_dict['x:0'].to(device), val_dict['dx:0'].to(device))
-            val_loss, val_loss_refinement, val_losses = criterion(val_out, val_dict['dx:0'].to(device), cfg)
+            val_loss, val_loss_refinement, val_losses = criterion(val_out, cfg)
             model.train()
             if cfg['print_progress']:
                 print_progress(epoch_idx, val_loss.item(), val_out)
@@ -56,7 +56,7 @@ def train(train_data, val_data, cfg):
             train_dict = create_feed_dictionary(train_data, cfg, idxs=idxs4batch)
             out = model(train_dict['x:0'].to(device), train_dict['dx:0'].to(device))
 
-            loss, loss_refinement, losses = criterion(out, train_dict['dx:0'].to(device), cfg)
+            loss, loss_refinement, losses = criterion(out, cfg)
             loss_refinement.backward()
             optimizer.step()
         print(epoch_idx, loss_refinement.item())
