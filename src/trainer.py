@@ -59,8 +59,20 @@ def train(train_data, val_data, cfg):
             loss, loss_refinement, losses = criterion(out, cfg)
             loss_refinement.backward()
             optimizer.step()
-        print(epoch_idx, loss_refinement.item())
 
+        if epoch_idx % cfg['val_frequency'] == 0:
+            # run on validation data
+            del out, loss, losses, loss_refinement
+            model.eval()
+            val_out = model(val_dict['x:0'].to(device), val_dict['dx:0'].to(device))
+            val_loss, val_loss_refinement, val_losses = criterion(val_out, cfg)
+            model.train()
+            if cfg['print_progress']:
+                print_progress(epoch_idx, val_loss_refinement.item(), val_losses, val_out)
+                print(model.coefficient_mask.detach().cpu().numpy())
+                print(model.sindy_coefficients.detach().cpu().numpy())
+                print()
+                print()
 
 def create_feed_dictionary(data, cfg, idxs=None):
     """
