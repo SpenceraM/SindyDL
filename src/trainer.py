@@ -38,7 +38,7 @@ def train(train_data, val_data, cfg):
             val_loss, val_loss_refinement, val_losses = criterion(val_out, cfg)
             model.train()
             if cfg['print_progress']:
-                print_progress(epoch_idx, val_loss.item(), val_out)
+                print_progress(epoch_idx, val_loss.item(), val_losses, val_out)
             del val_loss, val_losses, val_loss_refinement, val_out
 
             # Threshold the coefficient mask
@@ -94,7 +94,10 @@ def create_feed_dictionary(data, cfg, idxs=None):
     return feed_dict
 
 
-def print_progress(epoch_idx, loss, net_output):
+def print_progress(epoch_idx, loss, losses, net_output):
     nnz = torch.nonzero(net_output['coefficient_mask'].detach().cpu()).shape[0]
     mask_size = torch.numel(net_output['coefficient_mask'].detach().cpu())
-    print('Epoch {epoch_idx}: Loss {loss:.4f}, NumEl {nnz}/{mask_size}'.format(epoch_idx=epoch_idx, loss=loss,nnz=nnz, mask_size=mask_size))
+    print('Epoch {epoch_idx}: Total Loss {loss:.10f}, NumEl {nnz}/{mask_size}'.format(epoch_idx=epoch_idx, loss=loss,nnz=nnz, mask_size=mask_size))
+    for key in losses.keys():
+        print('    {key} loss: {loss_val:.10f}'.format(key=key, loss_val=losses[key].item()))
+    print()
