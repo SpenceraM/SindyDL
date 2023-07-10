@@ -1,5 +1,6 @@
 import os
 import torch
+from tqdm import tqdm
 import numpy as np
 from torch import nn
 from torch.utils.data import DataLoader
@@ -17,7 +18,7 @@ def train(train_data, val_data, cfg):
     validation_losses = []
 
     n_batches = cfg['epoch_size']//cfg['batch_size']
-    for epoch_idx in range(cfg['max_epochs']):
+    for epoch_idx in tqdm(range(cfg['max_epochs'])):
         for batch_idx in range(n_batches):
             # Zero your gradients for every batch!
             optimizer.zero_grad()
@@ -47,7 +48,7 @@ def train(train_data, val_data, cfg):
 
     # Refinement stage
     print('REFINEMENT')
-    for epoch_idx in range(cfg['refinement_epochs']):
+    for epoch_idx in tqdm(range(cfg['refinement_epochs'])):
         for batch_idx in range(n_batches):
             # Zero your gradients for every batch!
             optimizer.zero_grad()
@@ -109,7 +110,7 @@ def create_feed_dictionary(data, cfg, idxs=None):
 def print_progress(epoch_idx, loss, losses, net_output):
     nnz = torch.nonzero(net_output['coefficient_mask'].detach().cpu()).shape[0]
     mask_size = torch.numel(net_output['coefficient_mask'].detach().cpu())
-    print('Epoch {epoch_idx}: Total Loss {loss:.10f}, NumEl {nnz}/{mask_size}'.format(epoch_idx=epoch_idx, loss=loss,nnz=nnz, mask_size=mask_size))
+    print('\nEpoch {epoch_idx}: Total Loss {loss:.10f}, NumEl {nnz}/{mask_size}'.format(epoch_idx=epoch_idx, loss=loss,nnz=nnz, mask_size=mask_size))
     for key in losses.keys():
         print('    {key} loss: {loss_val:.10f}'.format(key=key, loss_val=losses[key].item()))
     print()

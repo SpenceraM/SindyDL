@@ -30,9 +30,9 @@ batch_size:  1024
 learning_rate:  1.e-3
 
 print_progress:  True
-val_frequency:  10
+val_frequency:  50
 
 # training time cutoffs
 max_epochs:  5001
 refinement_epochs:  1001
-num_experiments:  1
+num_experiments:  5
