@@ -15,7 +15,6 @@ def train(train_data, val_data, cfg):
     criterion = compound_loss
 
     val_dict = create_feed_dictionary(val_data, cfg, idxs=None)
-    validation_losses = []
 
     n_batches = cfg['epoch_size']//cfg['batch_size']
     for epoch_idx in tqdm(range(cfg['max_epochs'])):
@@ -74,7 +73,10 @@ def train(train_data, val_data, cfg):
                 print(model.sindy_coefficients.detach().cpu().numpy())
                 print()
                 print()
-
+    return {'sindy_mask': model.coefficient_mask.detach().cpu().numpy(),
+            'sindy_coefficients': model.sindy_coefficients.detach().cpu().numpy(),
+            'loss': val_loss_refinement.item(),
+            }
 def create_feed_dictionary(data, cfg, idxs=None):
     """
     Create the feed dictionary for passing into tensorflow.
