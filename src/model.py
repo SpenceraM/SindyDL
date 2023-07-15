@@ -32,9 +32,10 @@ class AutoEncoder(nn.Module):
             self.z_derivative_func = ZDerivativeOrder1(self.activation)
             self.sindy_library = SINDyLibraryOrder1(self.poly_order, self.include_sine)
         else:
-            raise ValueError('Invalid model order')
-            # self.z_derivative_func  =
+            self.z_derivative_func = ZDerivativeOrder2(self.activation)
             # self.sindy_library =
+            raise ValueError('Invalid model order')
+
 
         # TODO: initialize with random values
         self.sindy_coefficients = nn.Parameter(torch.empty(self.library_dim, self.latent_dim, requires_grad=True))  # Tensor to hold coefficients
@@ -168,6 +169,77 @@ class ZDerivativeOrder1(nn.Module):
         dz = torch.matmul(dz, torch.transpose(coder.layers[-1].fc.weight, 0, 1))
         return dz
 
+
+class ZDerivativeOrder2(nn.Module):
+    """
+    Compute the first and second order time derivatives by propagating through the network.
+
+    Arguments:
+        input - 2D tensorflow array, input to the network. Dimensions are number of time points
+        by number of state variables.
+        dx - First order time derivatives of the input to the network.
+        ddx - Second order time derivatives of the input to the network.
+        weights - List of tensorflow arrays containing the network weights
+        biases - List of tensorflow arrays containing the network biases
+        activation - String specifying which activation function to use. Options are
+        'elu' (exponential linear unit), 'relu' (rectified linear unit), 'sigmoid',
+        or linear.
+
+    Returns:
+        dz - Tensorflow array, first order time derivatives of the network output.
+        ddz - Tensorflow array, second order time derivatives of the network output.
+    """
+    def __init__(self, activation):
+        super().__init__()
+        self.activation = activation
+
+    def forward(self, x, dx, ddx, coder):
+        dz = dx
+        ddz = ddx
+        if self.activation == 'elu':
+            f = nn.ELU()
+            for i in range(len(coder.layers) - 1):
+                x = torch.matmul(x, torch.transpose(coder.layers[i].fc.weight, 0, 1)) + coder.layers[i].fc.bias
+                dz_prev = torch.matmul(dz, coder.layers[i].fc.weight)  # prolly will need transpose
+                elu_derivative = torch.min(torch.exp(x), torch.ones_like(x))
+                elu_derivative2 = torch.multiply(torch.exp(x), (input<0).to(torch.float32))
+                dz = torch.multiply(elu_derivative, dz_prev)
+                ddz = torch.multiply(elu_derivative2, torch.square(dz_prev)) \
+                      + torch.multiply(elu_derivative, torch.matmul(ddz, coder.layers[i].fc.weight))  # prolly will need transpose
+                x = f(x)
+            dz = torch.matmul(dz, coder.layers[-1].fc.weight)
+            ddz = torch.matmul(ddz, coder.layers[-1].fc.weight)
+        elif self.activation == 'relu':
+            # NOTE: currently having trouble assessing accuracy of 2nd derivative due to discontinuity
+            f = nn.ReLU()
+            for i in range(len(coder.layers) - 1):
+                x = torch.matmul(x, torch.transpose(coder.layers[i].fc.weight, 0, 1)) + coder.layers[i].fc.bias
+                relu_derivative = torch.max(torch.sign(x),0)
+                dz = torch.multiply(relu_derivative, torch.matmul(dz, coder.layers[i].fc.weight))
+                ddz = torch.multiply(relu_derivative, torch.matmul(ddz, coder.layers[i].fc.weight))
+                input = f(x)
+            dz = torch.matmul(dz,coder.layers[-1].fc.weight)
+            ddz = torch.matmul(ddz,coder.layers[-1].fc.weight)
+        elif self.activation == 'sigmoid':
+            f = nn.Sigmoid()
+            for i in range(len(coder.layers) - 1):
+                x = torch.matmul(x, torch.transpose(coder.layers[i].fc.weight, 0, 1)) + coder.layers[i].fc.bias
+                x = f(x)
+                dz_prev = torch.matmul(dz, coder.layers[i].fc.weight)
+                sigmoid_derivative = torch.multiply(x, 1-x)
+                sigmoid_derivative2 = torch.multiply(sigmoid_derivative, 1 - 2*x)
+                dz = torch.multiply(sigmoid_derivative, dz_prev)
+                ddz = torch.multiply(sigmoid_derivative2, torch.square(dz_prev)) \
+                      + torch.multiply(sigmoid_derivative, torch.matmul(ddz, coder.layers[i].fc.weight))
+            dz = torch.matmul(dz,coder.layers[-1].fc.weight)
+            ddz = torch.matmul(ddz, coder.layers[-1].fc.weight)
+        else:
+            for i in range(len(coder.layers) - 1):
+                dz = torch.matmul(dz, coder.layers[i].fc.weight)
+                ddz = torch.matmul(ddz, coder.layers[i].fc.weight)
+            dz = torch.matmul(dz, coder.layers[-1].fc.weight)
+            ddz = torch.matmul(ddz, coder.layers[-1].fc.weight)
+        return dz,ddz
 
 class SINDyLibraryOrder1(nn.Module):
     def __init__(self,  poly_order, include_sine):
