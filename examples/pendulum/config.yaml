@@ -1,0 +1,37 @@
+# Data
+n_train_ics: 2 #1024
+n_val_ics: 1 #20
+
+# Model and training parameters
+input_dim:  128
+latent_dim:  1
+model_order:  2
+poly_order:  3
+include_sine:  True
+
+# sequential thresholding parameters
+sequential_thresholding:  True
+coefficient_threshold:  0.1
+threshold_frequency:  500
+coefficient_initialization:  'constant'
+
+# loss function weighting
+loss_weight_decoder:  1.0
+loss_weight_sindy_z:  5.e-4
+loss_weight_sindy_x:  5.e-5
+loss_weight_sindy_regularization:  1.e-5
+
+activation:  'sigmoid'
+widths:  [128, 64, 32]
+
+# training parameters
+batch_size:  1000
+learning_rate:  1.e-4
+
+print_progress:  True
+val_frequency:  50
+
+# training time cutoffs
+max_epochs:  5001
+refinement_epochs:  1001
+num_experiments:  5
