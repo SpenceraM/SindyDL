@@ -216,8 +216,8 @@ class ZDerivativeOrder2(nn.Module):
                 x = torch.matmul(x, torch.transpose(coder.layers[i].fc.weight, 0, 1)) + coder.layers[i].fc.bias
                 relu_derivative = torch.max(torch.sign(x),0)
                 dz = torch.multiply(relu_derivative, torch.matmul(dz, coder.layers[i].fc.weight))
-                ddz = torch.multiply(relu_derivative, torch.matmul(ddz, coder.layers[i].fc.weight))
-                input = f(x)
+                ddz = torch.multiply(relu_derivative, torch.matmul(ddz, coder.layers[i].fc.weight))  # 2nd deriv of activ. is 0
+                x = f(x)
             dz = torch.matmul(dz,coder.layers[-1].fc.weight)
             ddz = torch.matmul(ddz,coder.layers[-1].fc.weight)
         elif self.activation == 'sigmoid':
