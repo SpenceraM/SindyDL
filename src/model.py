@@ -33,7 +33,7 @@ class AutoEncoder(nn.Module):
             self.sindy_library = SINDyLibraryOrder1(self.poly_order, self.include_sine)
         else:
             self.z_derivative_func = ZDerivativeOrder2(self.activation)
-            # self.sindy_library =
+            self.sindy_library = SINDyLibraryOrder2(self.poly_order, self.include_sine)
             raise ValueError('Invalid model order')
 
 
@@ -49,8 +49,12 @@ class AutoEncoder(nn.Module):
         z = self.encoder(x)  # z = latent dim
         x_hat = self.decoder(z) # standard autoencoder output
 
-        dz = self.z_derivative_func(x, dx, self.encoder)
-        Theta = self.sindy_library(z).to(z.device)  # Theta = library dim
+        if self.model_order == 1:
+            dz = self.z_derivative_func(x, dx, self.encoder)
+            Theta = self.sindy_library(z).to(z.device)  # Theta = library dim
+        else:
+            dz, ddz = self.z_derivative_func(x, dx, ddx, self.encoder)
+            Theta = self.sindy_library(z, dz).to(z.device)  # Theta = library dim
 
         if self.sequential_thresholding:
             sindy_prediction = torch.matmul(Theta, self.coefficient_mask * self.sindy_coefficients)
@@ -246,6 +250,7 @@ class SINDyLibraryOrder1(nn.Module):
         super().__init__()
         self.poly_order = poly_order
         self.include_sine = include_sine
+
     def forward(self, z):
         n_times = z.shape[0]
         latent_dim = z.shape[1]
@@ -286,6 +291,54 @@ class SINDyLibraryOrder1(nn.Module):
 
         return library
 
+
+class SINDyLibraryOrder2(nn.Module):
+    def __init__(self,  poly_order, include_sine):
+        super().__init__()
+        self.poly_order = poly_order
+        self.include_sine = include_sine
+
+    def forward(self, z, dz):
+        n_times = z.shape[0]
+        latent_dim = z.shape[1]
+
+        library = torch.ones(n_times, 1, device=z.device)
+        z_combined = torch.cat((z, dz), 1)
+        library = torch.cat(library, torch.unsqueeze(z_combined,1), 1)
+
+        if self.poly_order > 1:
+            for i in range(2*latent_dim):
+                for j in range(i, 2*latent_dim):
+                    library = torch.cat(library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j],1), 1)
+
+        if self.poly_order > 2:
+            for i in range(2*latent_dim):
+                for j in range(i, 2*latent_dim):
+                    for k in range(j, 2*latent_dim):
+                        library = torch.cat(library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k],1), 1)
+
+        if self.poly_order > 3:
+            for i in range(2*latent_dim):
+                for j in range(i, 2*latent_dim):
+                    for k in range(j, 2*latent_dim):
+                        for p in range(k, 2*latent_dim):
+                            library = torch.cat(library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k]*z_combined[:, p],1), 1)
+
+        if self.poly_order > 4:
+            for i in range(2*latent_dim):
+                for j in range(i, 2*latent_dim):
+                    for k in range(j, 2*latent_dim):
+                        for p in range(k, 2*latent_dim):
+                            for q in range(p, 2*latent_dim):
+                                library = torch.cat(library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k]*z_combined[:, p]*z_combined[:, q],1), 1)
+
+        if self.poly_order > 5:
+            raise ValueError('poly_order > 5 not implemented')
+
+        if self.include_sine:
+            library = torch.cat(library, torch.sin(z_combined), 1)
+
+        return library
 
 def compound_loss(network_out, cfg):
     x_input = network_out['x']
