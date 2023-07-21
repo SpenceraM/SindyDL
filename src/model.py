@@ -34,7 +34,6 @@ class AutoEncoder(nn.Module):
         else:
             self.z_derivative_func = ZDerivativeOrder2(self.activation)
             self.sindy_library = SINDyLibraryOrder2(self.poly_order, self.include_sine)
-            raise ValueError('Invalid model order')
 
 
         # TODO: initialize with random values
@@ -64,7 +63,7 @@ class AutoEncoder(nn.Module):
         if self.model_order == 1:
             dx_decoded = self.z_derivative_func(z, sindy_prediction, self.decoder)
         else:
-            raise ValueError('Invalid model order')
+            dx_decoded, ddx_decoded = self.z_derivative_func(z, dz, sindy_prediction, self.decoder)
 
         # Create dictionary to hold outputs
         outputs = {}
@@ -80,7 +79,10 @@ class AutoEncoder(nn.Module):
         if self.model_order == 1:
             outputs['dz_predict'] = sindy_prediction
         else:
-            raise ValueError('Invalid model order')
+            outputs['ddz'] = ddz
+            outputs['ddz_predict'] = sindy_prediction
+            outputs['ddx'] = ddx
+            outputs['ddx_decoded'] = ddx_decoded
 
         return outputs
 
@@ -229,14 +231,14 @@ class ZDerivativeOrder2(nn.Module):
             for i in range(len(coder.layers) - 1):
                 x = torch.matmul(x, torch.transpose(coder.layers[i].fc.weight, 0, 1)) + coder.layers[i].fc.bias
                 x = f(x)
-                dz_prev = torch.matmul(dz, coder.layers[i].fc.weight)
+                dz_prev = torch.matmul(dz, torch.transpose(coder.layers[i].fc.weight, 0, 1))
                 sigmoid_derivative = torch.multiply(x, 1-x)
                 sigmoid_derivative2 = torch.multiply(sigmoid_derivative, 1 - 2*x)
                 dz = torch.multiply(sigmoid_derivative, dz_prev)
                 ddz = torch.multiply(sigmoid_derivative2, torch.square(dz_prev)) \
-                      + torch.multiply(sigmoid_derivative, torch.matmul(ddz, coder.layers[i].fc.weight))
-            dz = torch.matmul(dz,coder.layers[-1].fc.weight)
-            ddz = torch.matmul(ddz, coder.layers[-1].fc.weight)
+                      + torch.multiply(sigmoid_derivative, torch.matmul(ddz, torch.transpose(coder.layers[i].fc.weight, 0, 1)))
+            dz = torch.matmul(dz,torch.transpose(coder.layers[-1].fc.weight, 0, 1))
+            ddz = torch.matmul(ddz, torch.transpose(coder.layers[-1].fc.weight, 0, 1))
         else:
             for i in range(len(coder.layers) - 1):
                 dz = torch.matmul(dz, coder.layers[i].fc.weight)
@@ -304,25 +306,25 @@ class SINDyLibraryOrder2(nn.Module):
 
         library = torch.ones(n_times, 1, device=z.device)
         z_combined = torch.cat((z, dz), 1)
-        library = torch.cat(library, torch.unsqueeze(z_combined,1), 1)
+        library = torch.cat((library, z_combined), 1)
 
         if self.poly_order > 1:
             for i in range(2*latent_dim):
                 for j in range(i, 2*latent_dim):
-                    library = torch.cat(library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j],1), 1)
+                    library = torch.cat((library,torch.unsqueeze(z_combined[:, i]*z_combined[:, j],1)), 1)
 
         if self.poly_order > 2:
             for i in range(2*latent_dim):
                 for j in range(i, 2*latent_dim):
                     for k in range(j, 2*latent_dim):
-                        library = torch.cat(library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k],1), 1)
+                        library = torch.cat((library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k],1)), 1)
 
         if self.poly_order > 3:
             for i in range(2*latent_dim):
                 for j in range(i, 2*latent_dim):
                     for k in range(j, 2*latent_dim):
                         for p in range(k, 2*latent_dim):
-                            library = torch.cat(library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k]*z_combined[:, p],1), 1)
+                            library = torch.cat((library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k]*z_combined[:, p],1)), 1)
 
         if self.poly_order > 4:
             for i in range(2*latent_dim):
@@ -330,13 +332,13 @@ class SINDyLibraryOrder2(nn.Module):
                     for k in range(j, 2*latent_dim):
                         for p in range(k, 2*latent_dim):
                             for q in range(p, 2*latent_dim):
-                                library = torch.cat(library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k]*z_combined[:, p]*z_combined[:, q],1), 1)
+                                library = torch.cat((library, torch.unsqueeze(z_combined[:, i]*z_combined[:, j]*z_combined[:, k]*z_combined[:, p]*z_combined[:, q],1)), 1)
 
         if self.poly_order > 5:
             raise ValueError('poly_order > 5 not implemented')
 
         if self.include_sine:
-            library = torch.cat(library, torch.sin(z_combined), 1)
+            library = torch.cat((library, torch.sin(z_combined)), 1)
 
         return library
 
@@ -349,7 +351,11 @@ def compound_loss(network_out, cfg):
         dx = network_out['dx']
         dx_decoded = network_out['dx_decoded']
     else:
-        raise ValueError('Invalid model order')
+        ddz = network_out['ddz']
+        ddz_predict = network_out['ddz_predict']
+        ddx = network_out['ddx']
+        ddx_decoded = network_out['ddx_decoded']
+
     sindy_coeff = network_out['sindy_coefficients'] * network_out['coefficient_mask']
     losses = {}
     losses['decoder'] =nn.functional.mse_loss(x_output, x_input, reduction='mean')   # reconstruction loss
@@ -357,7 +363,9 @@ def compound_loss(network_out, cfg):
         losses['sindy_z'] = nn.functional.mse_loss(dz, dz_predict, reduction='mean')  # SINDy loss in z
         losses['sindy_x'] = nn.functional.mse_loss(dx, dx_decoded, reduction='mean')  # SINDy loss in x
     else:
-        raise ValueError('Invalid model order')
+        losses['sindy_z'] = nn.functional.mse_loss(ddz, ddz_predict, reduction='mean')
+        losses['sindy_x'] = nn.functional.mse_loss(ddx, ddx_decoded, reduction='mean')
+
     losses['sindy_regularization'] = torch.abs(sindy_coeff).mean()  # Sparsify SINDy coefficients
 
     # combine losses

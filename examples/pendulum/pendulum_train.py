@@ -51,6 +51,7 @@ if __name__ == '__main__':
 
         cfg['coefficient_mask'] = np.ones((cfg['library_dim'], cfg['latent_dim']))
         cfg['save_name'] = 'lorenz_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
+        cfg['input_dim'] = training_data['x'].shape[-1]
 
         results_dict = train(training_data, validation_data, cfg)
         results_dict['seed'] = i

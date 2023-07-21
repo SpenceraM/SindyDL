@@ -3,7 +3,6 @@ n_train_ics: 2 #1024
 n_val_ics: 1 #20
 
 # Model and training parameters
-input_dim:  128
 latent_dim:  1
 model_order:  2
 poly_order:  3
