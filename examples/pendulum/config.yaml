@@ -16,8 +16,8 @@ coefficient_initialization:  'constant'
 
 # loss function weighting
 loss_weight_decoder:  1.0
-loss_weight_sindy_z:  5.e-4
-loss_weight_sindy_x:  5.e-5
+loss_weight_sindy_z:  5.e-5
+loss_weight_sindy_x:  5.e-4
 loss_weight_sindy_regularization:  1.e-5
 
 activation:  'sigmoid'
