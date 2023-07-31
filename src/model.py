@@ -132,8 +132,8 @@ class FcLayer(nn.Module):
         self.activation = activation
 
         fc = nn.Linear(self.input_dim, self.output_dim)
-        torch.nn.init.xavier_normal_(fc.weight)
-        # torch.nn.init.constant_(fc.weight, 1.0)
+        # torch.nn.init.xavier_normal_(fc.weight)
+        torch.nn.init.constant_(fc.weight, 1.0)
         torch.nn.init.zeros_(fc.bias)
         self.fc = fc
 
