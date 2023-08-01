@@ -14,6 +14,8 @@ class AutoEncoder(nn.Module):
         self.activation = cfg['activation']
         self.poly_order = cfg['poly_order']
         self.coefficient_threshold = cfg['coefficient_threshold']
+        self.weight_initialization = cfg.get('weight_initialization', 'xavier')
+
         if 'include_sine' in cfg.keys():
             self.include_sine = cfg['include_sine']
         else:
@@ -25,8 +27,8 @@ class AutoEncoder(nn.Module):
         if self.activation == 'linear':
             pass
         else:  # non-linear activation
-            self.encoder = XcoderHalf(self.input_dim, self.latent_dim, self.widths, self.activation)
-            self.decoder = XcoderHalf(self.latent_dim, self.input_dim, self.widths[::-1], self.activation)
+            self.encoder = XcoderHalf(self.input_dim, self.latent_dim, self.widths, self.activation, self.weight_initialization)
+            self.decoder = XcoderHalf(self.latent_dim, self.input_dim, self.widths[::-1], self.activation, self.weight_initialization)
 
         if self.model_order == 1:
             self.z_derivative_func = ZDerivativeOrder1(self.activation)
@@ -95,7 +97,7 @@ class AutoEncoder(nn.Module):
 
 
 class XcoderHalf(nn.Module):  # Xcoder as in Encoder or Decoder
-    def __init__(self, input_dim, output_dim, widths, activation):
+    def __init__(self, input_dim, output_dim, widths, activation, weight_initialization):
         super().__init__()
         # self.input_dim = input_dim
         # self.output_dim = output_dim
@@ -113,10 +115,10 @@ class XcoderHalf(nn.Module):  # Xcoder as in Encoder or Decoder
         self.layers = nn.ModuleList()
         for i in range(len(widths)):
             if i == 0:
-                self.layers.append(FcLayer(input_dim, widths[i], activation))
+                self.layers.append(FcLayer(input_dim, widths[i], activation, weight_initialization))
             else:
-                self.layers.append(FcLayer(widths[i-1], widths[i], activation))
-        self.layers.append(FcLayer(widths[-1], output_dim, None))
+                self.layers.append(FcLayer(widths[i-1], widths[i], activation, weight_initialization))
+        self.layers.append(FcLayer(widths[-1], output_dim, None, weight_initialization))
 
     def forward(self, x):
         for layer in self.layers:
@@ -125,15 +127,17 @@ class XcoderHalf(nn.Module):  # Xcoder as in Encoder or Decoder
 
 
 class FcLayer(nn.Module):
-    def __init__(self, input_dim, output_dim, activation):
+    def __init__(self, input_dim, output_dim, activation, weight_initialization):
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.activation = activation
 
         fc = nn.Linear(self.input_dim, self.output_dim)
-        # torch.nn.init.xavier_normal_(fc.weight)
-        torch.nn.init.constant_(fc.weight, 1.0)
+        if weight_initialization.lower() == 'constant':
+            torch.nn.init.constant_(fc.weight, 1.0)
+        elif weight_initialization.lower() == 'xavier':
+            torch.nn.init.xavier_normal_(fc.weight)
         torch.nn.init.zeros_(fc.bias)
         self.fc = fc
 

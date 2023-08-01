@@ -22,6 +22,8 @@ loss_weight_sindy_regularization:  1.e-5
 
 activation:  'sigmoid'
 widths:  [128, 64, 32]
+weight_initialization: 'constant'
+
 
 # training parameters
 batch_size:  1000
