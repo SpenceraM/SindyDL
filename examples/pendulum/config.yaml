@@ -1,6 +1,6 @@
 # Data
-n_train_ics: 120
-n_val_ics: 3
+n_train_ics: 100
+n_val_ics: 10
 
 # Model and training parameters
 latent_dim:  1
@@ -10,7 +10,7 @@ include_sine:  True
 
 # sequential thresholding parameters
 sequential_thresholding:  True
-coefficient_threshold:  0.1
+coefficient_threshold:  0.25
 threshold_frequency:  300
 coefficient_initialization:  'constant'
 
