@@ -34,5 +34,5 @@ val_frequency:  50
 
 # training time cutoffs
 max_epochs:  901
-refinement_epochs:  1001
+refinement_epochs:  101
 num_experiments:  10

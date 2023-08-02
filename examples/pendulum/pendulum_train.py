@@ -43,14 +43,14 @@ if __name__ == '__main__':
         torch.manual_seed(i)
         # generate training, validation, testing data
         print('Generating training data')
-        training_data = get_pendulum_data(cfg.get('n_train_ics', 1024))
+        training_data = get_pendulum_data(cfg.get('n_train_ics', 100))
         cfg['epoch_size'] = training_data['x'].shape[0]
         print('Generating validation data')
-        validation_data = get_pendulum_data(cfg.get('n_val_ics', 20))
+        validation_data = get_pendulum_data(cfg.get('n_val_ics', 10))
         print('Finished generating data\n')
 
         cfg['coefficient_mask'] = np.ones((cfg['library_dim'], cfg['latent_dim']))
-        cfg['save_name'] = 'lorenz_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
+        cfg['save_name'] = 'pendulum_' + datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
         cfg['input_dim'] = training_data['x'].shape[-1]
 
         results_dict = train(training_data, validation_data, cfg)
